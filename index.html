@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<body>
+<canvas id="game" width="500" height="500" style="border: 1px solid red">
+Your browser does not support the HTML5 canvas tag.
+</canvas>
+<script>
+
+function getRandomInt(max) {
+	return Math.floor(Math.random() * Math.floor(max));
+}
+
+class Snake {
+
+	constructor(canvas) {
+		this.fps = 10;
+		this.row_size = 30;
+		this.dir = 0;
+		this.pos = [
+			{
+				x: 0,
+				y: 0,
+				d: this.dir,
+			}
+		];
+		this.bonus_pos = {
+			x: this.row_size / 2,
+			y: this.row_size / 2,
+		};
+		this._directions = [
+			{x: 0, y: -1},// North
+			{x: 1, y: 0}, // East
+			{x: 0, y: 1}, // South
+			{x: -1, y:0}, // West
+		];
+		this.canvas = canvas
+		this.ctx = canvas.getContext("2d");
+		this.height = canvas.height;
+		this.width = canvas.width;
+		this.tile_size_x = this.width / this.row_size;
+		this.tile_size_y = this.height / this.row_size;
+		this.sprite = new Image()
+		this.sprite.src = "assets/sprite.png";
+		this.sprites = {
+			head: [
+				[0, 0, 25, 25],
+				[0, 25, 25, 25],
+				[0, 50, 25, 25],
+				[0, 75, 25, 25],
+			],
+			tail: [
+				[25, 0, 25, 25],
+				[25, 25, 25, 25],
+				[25, 50, 25, 25],
+				[25, 75, 25, 25],
+			],
+			corner: [
+				[50, 0, 25, 25],
+				[75, 0, 25, 25],
+				[50, 25, 25, 25],
+				[75, 25, 25, 25],
+        [50, 50, 25, 25],
+        [75, 50, 25, 25],
+			],
+			bonus: [75, 75, 25, 25],
+		};
+	}
+
+	get_keyboard_input(e) {
+		var keys = [38, 39, 40, 37];
+		var dir = keys.indexOf(e.keyCode);
+		if (dir != -1) {
+			this.dir = dir;
+		}
+	}
+
+	check_bonus(new_pos) {
+		var params = [this.sprite, ...this.sprites["bonus"], 
+		this.bonus_pos.x * this.tile_size_x,
+		this.bonus_pos.y * this.tile_size_y,
+		this.tile_size_x, this.tile_size_y];
+		this.ctx.drawImage(...params);
+		if (this.pos[0].x == this.bonus_pos.x && this.pos[0].y == this.bonus_pos.y) {
+			this.pos.unshift(new_pos);
+			document.title = this.pos.length - 1;
+			this.bonus_pos.x = getRandomInt(this.row_size);
+			this.bonus_pos.y = getRandomInt(this.row_size);
+		}
+	}
+
+	start() {
+			var t = this;
+			this._intervalId = setInterval(function(){t.update()}, 1000 / this.fps);
+			document.onkeydown = function(e){t.get_keyboard_input(e)};
+			document.title = this.pos.length;
+	}
+
+	update() {
+		this.ctx.clearRect(0,0,this.height, this.width);
+  	var new_x = this.pos[0].x + this._directions[this.dir].x;
+		var new_y = this.pos[0].y + this._directions[this.dir].y;
+		var cross_val = (this.dir == 0 || this.dir == 3) ? this.row_size -1 : 0;
+		var new_pos = {
+			x: (new_x > -1 && new_x < this.row_size) ? new_x : cross_val,
+			y: (new_y > -1 && new_y < this.row_size) ? new_y : cross_val,
+			d: this.dir,
+		};
+
+		if (this.pos.filter(function(e) {
+			return (e.x == new_pos.x) && (e.y == new_pos.y)}).length) {
+				this.end();
+		};
+
+		this.pos.unshift(new_pos);
+		this.check_bonus(new_pos);
+		this.pos.pop();
+ 
+		for(var i = 0; i < this.pos.length; i++) {
+      var p = [
+        this.pos[i].x * this.tile_size_x,
+        this.pos[i].y * this.tile_size_y,
+        this.tile_size_x,
+        this.tile_size_y,
+      ];
+      if (i == 0) {
+        var params = [this.sprite, ...this.sprites["head"][this.pos[i].d], ...p];
+        this.ctx.drawImage(...params);
+      }
+      else if (i == (this.pos.length - 1)) {
+        var params = [this.sprite, ...this.sprites["tail"][this.pos[i].d], ...p];
+        this.ctx.drawImage(...params);
+      }
+      else {
+        // WIP: Define the right corner here.
+        this.ctx.fillStyle = "#FF0000";
+        this.ctx.fillRect(...p);
+      }
+		}
+	}
+
+	end() {
+		clearInterval(this._intervalId);
+	}
+}
+
+
+window.onload = function() {
+	var canvas = document.getElementById("game");
+	var snake = new Snake(canvas);
+	snake.start();
+};
+</script>
+</body>
+</html>
